@@ -25,7 +25,7 @@
                         <artifactItem>
                             <groupId>status-im</groupId>
                             <artifactId>status-go-ios-simulator</artifactId>
-                            <version>develop-ge6610f3b</version>
+                            <version>config4-gc99e1176-196</version>
                             <type>zip</type>
                             <overWrite>true</overWrite>
                             <outputDirectory>./</outputDirectory>
