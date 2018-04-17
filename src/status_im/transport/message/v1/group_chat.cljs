@@ -27,16 +27,18 @@
                                         :payload     this}
                                        cofx)))
   (receive [this _ signature {:keys [db] :as cofx}]
-    (handlers/merge-fx cofx
-                       {:shh/add-new-sym-key {:web3       (:web3 db)
-                                              :sym-key    sym-key
-                                              :on-success (fn [sym-key sym-key-id]
-                                                            (re-frame/dispatch [::add-new-sym-key {:chat-id    chat-id
-                                                                                                   :signature  signature
-                                                                                                   :sym-key    sym-key
-                                                                                                   :sym-key-id sym-key-id
-                                                                                                   :message    message}]))}}
-                       (protocol/init-chat chat-id))))
+    (when-not ((:deleted-chats db) chat-id)
+      ;; chat was deleted so I'm not interested in group key updates anymore 
+      (handlers/merge-fx cofx
+                         {:shh/add-new-sym-key {:web3       (:web3 db)
+                                                :sym-key    sym-key
+                                                :on-success (fn [sym-key sym-key-id]
+                                                              (re-frame/dispatch [::add-new-sym-key {:chat-id    chat-id
+                                                                                                     :signature  signature
+                                                                                                     :sym-key    sym-key
+                                                                                                     :sym-key-id sym-key-id
+                                                                                                     :message    message}]))}}
+                         (protocol/init-chat chat-id)))))
 
 (defn- user-is-group-admin? [chat-id cofx]
   (= (get-in cofx [:db :chats chat-id :group-admin])
