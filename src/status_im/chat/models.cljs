@@ -26,14 +26,13 @@
      :last-clock-value   0}))
 
 (defn add-chat
-  "Adds new chat to db & realm, if the chat with same id already exists, justs restores it"
+  "Adds new chat to db & realm, if the chat has been deleted, make sure is not
+  in deleted-chats"
   ([chat-id cofx]
    (add-chat chat-id {} cofx))
-  ([chat-id chat-props {:keys [db get-stored-chat] :as cofx}]
+  ([chat-id chat-props {:keys [db] :as cofx}]
    (let [{:keys [deleted-chats]} db
-         new-chat (merge (if (get deleted-chats chat-id)
-                           (assoc (get-stored-chat chat-id) :is-active true)
-                           (create-new-chat chat-id cofx))
+         new-chat (merge (create-new-chat chat-id cofx)
                          chat-props)]
      {:db                  (-> db
                                (update :chats assoc chat-id new-chat)
@@ -69,27 +68,16 @@
     {:db                   (assoc-in db [:chats chat-id] chat)
      :data-store/save-chat chat}))
 
-;; TODO (yenda): there should be an option to update the timestamp
-;; this shouldn't need a specific function like `upsert-chat` which
-;; is wrongfuly named
-(defn update-chat
-  "Updates chat properties when not deleted, if chat is not present in app-db, creates a default new one"
+(defn upsert-chat
+  "Upsert chat when not deleted"
   [{:keys [chat-id] :as chat-props} {:keys [db] :as cofx}]
   (let [{:keys [chats deleted-chats]} db]
     (if (get deleted-chats chat-id) ;; when chat is deleted, don't change anything
       {:db db}
-      (let [chat (merge (or (get chats chat-id)
-                            (create-new-chat chat-id cofx))
-                        chat-props)]
-        {:db                   (update-in db [:chats chat-id] merge chat)
+      (let [chat (or (get chats chat-id)
+                     (create-new-chat chat-id cofx))]
+        {:db                   (update-in db [:chats chat-id] merge chat chat-props)
          :data-store/save-chat chat}))))
-
-;; TODO (yenda): an upsert is suppose to add the entry if it doesn't
-;; exist and update it if it does
-(defn upsert-chat
-  "Just like `update-chat` only implicitely updates timestamp"
-  [chat cofx]
-  (update-chat (assoc chat :timestamp (:now cofx)) cofx))
 
 (defn new-update? [{:keys [added-to-at removed-at removed-from-at]} timestamp]
   (and (> timestamp added-to-at)

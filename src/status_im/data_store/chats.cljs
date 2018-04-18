@@ -15,11 +15,6 @@
   (fn [cofx _]
     (assoc cofx :inactive-chat-ids (data-store/get-inactive-ids))))
 
-(re-frame/reg-cofx
-  :data-store/get-chat
-  (fn [cofx _]
-    (assoc cofx :get-stored-chat data-store/get-by-id)))
-
 (re-frame/reg-fx
   :data-store/save-chat
   (fn [{:keys [chat-id] :as chat}]

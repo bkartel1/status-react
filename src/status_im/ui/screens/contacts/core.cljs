@@ -59,6 +59,6 @@
             (if (chats public-key)
               (handlers/merge-fx cofx
                                  (update-contact contact)
-                                 (chat.models/update-chat {:chat-id chat-id
+                                 (chat.models/upsert-chat {:chat-id chat-id
                                                            :name    name}))
               (update-contact contact cofx))))))))

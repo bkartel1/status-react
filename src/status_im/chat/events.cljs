@@ -222,7 +222,7 @@
 
 (handlers/register-handler-fx
   :add-chat-loaded-event
-  [(re-frame/inject-cofx :data-store/get-chat) re-frame/trim-v]
+  [re-frame/trim-v]
   (fn [{:keys [db] :as cofx} [chat-id event]]
     (if (get (:chats db) chat-id)
       {:db (assoc-in db [:chats chat-id :chat-loaded-event] event)}
@@ -232,7 +232,7 @@
 ;; TODO(janherich): remove this unnecessary event in the future (only model function `add-chat` will stay)
 (handlers/register-handler-fx
   :add-chat
-  [(re-frame/inject-cofx :data-store/get-chat) re-frame/trim-v]
+  [re-frame/trim-v]
   (fn [cofx [chat-id chat-props]]
     (models/add-chat chat-id chat-props cofx)))
 
@@ -270,7 +270,7 @@
 
 (handlers/register-handler-fx
   :start-chat
-  [(re-frame/inject-cofx :data-store/get-chat) re-frame/trim-v]
+  [re-frame/trim-v]
   (fn [cofx [contact-id opts]]
     (start-chat contact-id opts cofx)))
 
@@ -279,7 +279,7 @@
   :update-chat!
   [re-frame/trim-v]
   (fn [cofx [chat]]
-    (models/update-chat chat cofx)))
+    (models/upsert-chat chat cofx)))
 
 (defn- remove-transport [chat-id {:keys [db] :as cofx}]
   (let [{:keys [group-chat public?]} (get-in db [:chats chat-id])]

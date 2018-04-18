@@ -13,8 +13,9 @@
             [status-im.transport.message.v1.protocol :as protocol]))
 
 (def receive-interceptors
-  [(re-frame/inject-cofx :data-store/get-message) (re-frame/inject-cofx :data-store/get-chat)
-   (re-frame/inject-cofx :random-id) re-frame/trim-v])
+  [(re-frame/inject-cofx :data-store/get-message)
+   (re-frame/inject-cofx :random-id)
+   re-frame/trim-v])
 
 (defn- lookup-response-ref
   [access-scope->commands-responses account chat contacts response-name]
@@ -46,9 +47,10 @@
                               (update-in [:chats chat-id :unviewed-messages] (fnil conj #{}) message-id))
      :data-store/save-message prepared-message}))
 
-(defn- prepare-chat [chat-id {:keys [db] :as cofx}]
+(defn- prepare-chat [chat-id {:keys [db now] :as cofx}]
   (if (get-in db [:chats chat-id])
-    (chat-model/upsert-chat {:chat-id chat-id} cofx)
+    (chat-model/upsert-chat {:chat-id chat-id
+                             :timestamp now} cofx)
     (chat-model/add-chat chat-id cofx)))
 
 (defn- get-current-account [{:accounts/keys [accounts current-account-id]}]
@@ -130,8 +132,9 @@
 ;;;; Send message
 
 (def send-interceptors
-  [(re-frame/inject-cofx :random-id) (re-frame/inject-cofx :random-id-seq)
-   (re-frame/inject-cofx :data-store/get-chat) re-frame/trim-v])
+  [(re-frame/inject-cofx :random-id)
+   (re-frame/inject-cofx :random-id-seq)
+   re-frame/trim-v])
 
 (defn- handle-message-from-bot [{:keys [random-id] :as cofx} {:keys [message chat-id]}]
   (when-let [message (cond
@@ -203,11 +206,12 @@
 
 (def ^:private transport-keys [:content :content-type :message-type :clock-value :timestamp])
 
-(defn- upsert-and-send [{:keys [chat-id] :as message} cofx]
+(defn- upsert-and-send [{:keys [chat-id] :as message} {:keys [now] :as cofx}]
   (let [send-record     (protocol/map->Message (select-keys message transport-keys))
         message-with-id (assoc message :message-id (transport.utils/message-id send-record))]
     (handlers/merge-fx cofx
-                       (chat-model/upsert-chat {:chat-id chat-id})
+                       (chat-model/upsert-chat {:chat-id chat-id
+                                                :timestamp now})
                        (add-message chat-id message-with-id true)
                        (send chat-id send-record))))
 
@@ -216,7 +220,7 @@
 
 (defn- prepare-command-message
   [identity
-   {:keys [last-clock-value chat-id] :as chat}
+   chat-id
    now
    {request-params  :params
     request-command :command
@@ -249,7 +253,7 @@
                                                constants/content-type-command-request
                                                constants/content-type-command))
                        :outgoing         true
-                       :clock-value      (utils.clocks/send last-clock-value)
+                       :clock-value      (utils.clocks/send 0)
                        :show?            true}
                       chat)))
 
@@ -263,7 +267,7 @@
   (let [{{:keys [handler-data to-message command] :as content} :command chat-id :chat-id} params
         request (:request handler-data)]
     (handlers/merge-fx cofx
-                       (upsert-and-send (prepare-command-message current-public-key (get chats chat-id) now request content))
+                       (upsert-and-send (prepare-command-message current-public-key chat-id now request content))
                        (add-console-responses command handler-data)
                        (requests-events/request-answered chat-id to-message))))
 
